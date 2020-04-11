@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+
+import pynet.endpoints as Endpoints
+from pynet.endpoint import Endpoint,InputEndpoint,OutputEndpoint
+
+import pynet.modules as Modules
+from pynet.module import Module
+
+from pynet.endpoints.interface import VirtualInterface
+
+from pynet.proxy import Relay,MultipleClientRelay
+from pynet.module import PassThrough,ModuleContainer
+from pynet.tools.cmdline import PynetParser
+
+
+def main():
+    description = "The PYthon TUNel swiss knife\n\nGeneral command: pytun [-s] Endpoint [Module]"
+    pytun_parser = PynetParser("pytun",description)
+    pytun_parser.add_option("--server","-s",action="store_true",help="Set tunnel in server mode")
+
+    VirtualInterface.set_cli_arguments(pytun_parser.parser)
+    VirtualInterface.set_cli_arguments(pytun_parser.preparser)
+
+    args,remain = pytun_parser.preparser.parse_known_args()
+
+    if args.server:
+        plugins = [("InputEndpoint",lambda p:issubclass(p,Endpoint) and p.EP1)]
+    else:
+        plugins = [("OutputEndpoint",lambda p:issubclass(p,Endpoint) and p.EP2)]
+    plugins.append(("Module",lambda p:issubclass(p,Module)))
+
+    pytun_parser.plugins_cb = plugins
+    ep,module = pytun_parser.parse()
+    endpoint,endpoint_args = ep
+    module,module_args = module
+    module = module if module else PassThrough
+
+    vif = VirtualInterface(ip=args.ip)
+    endpoint = endpoint.from_cli(endpoint_args)
+
+    if args.server:
+        endpoint1 = endpoint
+        endpoint2 = vif
+    else:
+        endpoint1 = vif
+        endpoint2 = endpoint
+
+    module_container = ModuleContainer(module,module_args)
+
+    # Depending on the endpoint, we are not using the same relay
+    relay_class = MultipleClientRelay if hasattr(endpoint1,"handle_new_client") else Relay
+    relay = relay_class(first_endpoint=endpoint1,second_endpoint=endpoint2,module=module_container)
+
+    relay.run()
+
+    return 0
+
+
+if __name__ == "__main__":
+   sys.exit(main())

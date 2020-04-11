@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+
+import pynet.endpoints as Endpoints
+from pynet.endpoint import Endpoint,InputEndpoint,OutputEndpoint
+
+import pynet.modules as Modules
+from pynet.module import Module
+
+from pynet.endpoints.socket import SOCKET,TCP
+
+from pynet.proxy import Relay,MultipleClientRelay
+from pynet.module import PassThrough,ModuleContainer
+from pynet.tools.cmdline import *
+
+def main():
+    description = "The PYthon soCAT swiss knife\n\nGeneral command: pycat InputEndpoint OutputEndpoint [Module]"
+    parser = PynetParser("pycat",description,[("InputEndpoint",lambda p:issubclass(p,Endpoint) and p.EP1),("OutputEndpoint",lambda p:issubclass(p,Endpoint) and p.EP2),("Module",lambda p:issubclass(p,Module))])
+
+    ep1,ep2,module = parser.parse()
+    endpoint1,ep1args = ep1
+    endpoint2,ep2args = ep2
+    module,module_args = module
+
+    endpoint1 = endpoint1.from_cli(ep1args)
+    endpoint2 = endpoint2.from_cli(ep2args)
+    module = module if module else PassThrough
+    module_container = ModuleContainer(module,module_args)
+
+    # Depending on the endpoint, we are not using the same relay
+    relay_class = MultipleClientRelay if hasattr(endpoint1,"handle_new_client") else Relay
+    relay = relay_class(first_endpoint=endpoint1,second_endpoint=endpoint2,module=module_container)
+
+    relay.run()
+
+    return 0
+
+
+if __name__ == "__main__":
+   sys.exit(main())

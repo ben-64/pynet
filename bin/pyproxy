@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import sys
+
+import pynet.modules as Modules
+from pynet.module import Module
+
+import pynet.proxys as Proxys
+from pynet.proxy import Proxy
+
+from pynet.module import PassThrough,ModuleContainer
+
+from pynet.tools.cmdline import *
+
+
+def main():
+    description = "The PYthon proxy swiss knife\n\nGeneral command: pyproxy PROXY [Module]\n\n"
+    parser = PynetParser("pyproxy",description,[("Proxy",lambda p:issubclass(p,Proxy)),("Module",lambda p:issubclass(p,Module))])
+
+    proxy,module = parser.parse()
+    proxy,proxy_args = proxy
+    module,module_args = module
+
+    module = module if module else PassThrough
+    module_container = ModuleContainer(module,module_args)
+    proxy_args["module"] = module_container
+
+    proxy = proxy.from_cli(proxy_args)
+    proxy.run()
+
+
+if __name__ == "__main__":
+   sys.exit(main())
