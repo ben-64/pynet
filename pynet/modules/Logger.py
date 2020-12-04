@@ -50,8 +50,8 @@ class Logger(PassThrough):
     @classmethod
     def set_cli_arguments(cls,parser):
         PassThrough.set_cli_arguments(parser)
-        parser.add_argument("--no-log-request",action="store_true",help="Print requests done by client")
-        parser.add_argument("--no-log-response",action="store_true",help="Print responses sent by server")
+        parser.add_argument("--no-log-request",action="store_true",help="Do not print requests done by client")
+        parser.add_argument("--no-log-response",action="store_true",help="Do not print responses sent by server")
         parser.add_argument("--no-hex",action="store_false",dest="hex",help="Do not print data in hexa")
         parser.add_argument("--color-client",metavar="COLOR",default="31",type=get_ansi_color,help="Color for client communication (default=31)")
         parser.add_argument("--color-server",metavar="COLOR",default="32",type=get_ansi_color,help="Color for client communication (default=32)")
