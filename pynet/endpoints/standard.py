@@ -15,8 +15,8 @@ class STDIN(InputEndpoint):
         super().set_cli_arguments(parser)
         parser.add_argument("--size","-s",metavar="INTEGER",type=int,help="Size to read")
 
-    def __init__(self,size=None):
-        super().__init__()
+    def __init__(self,size=None,*args,**kargs):
+        super().__init__(*args,**kargs)
         self.size = size
         self.stop = False
 
