@@ -128,7 +128,7 @@ class NetSocketListen(SOCKET):
         parser.add_argument("--port","-p",metavar="PORT",type=int,required=True,help="Destination port")
 
     def __init__(self,port,bind="0.0.0.0",transparent=False,*args,**kargs):
-        super().__init__()
+        super().__init__(*args,**kargs)
         self.bind_ip = bind
         self.port = port
         self.bind_addr = (self.bind_ip,self.port)
@@ -154,7 +154,7 @@ class UnixSocketReception(SOCKET):
         parser.add_argument("--abstract","-a",action="store_true",help="Use abstract socket")
 
     def __init__(self,bind,abstract=False,*args,**kargs):
-        super().__init__()
+        super().__init__(*args,**kargs)
         self.bind_addr = "\x00" + bind if abstract else bind
 
     def close(self):
