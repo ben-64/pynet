@@ -62,10 +62,10 @@ class Layer4Proxy(Proxy):
             self.bridge_configurator.deconfigure()
 
     def create_client_side(self):
-        return self.CLIENT_ENDPOINT(bind=self.host,port=self.port,transparent=self.transparent)
+        return self.CLIENT_ENDPOINT(bind=self.host,sport=self.port,transparent=self.transparent)
 
     def create_server_side(self,dest,dport,sport):
-        return self.SERVER_ENDPOINT(destination=dest,port=dport,src_port=sport,transparent=self.transparent)
+        return self.SERVER_ENDPOINT(destination=dest,dport=dport,sport=sport,transparent=self.transparent)
 
     def handle_new_connection(self,endpoint_client,real_dst_addr=None):
         """ Handle a new data coming to the socket """

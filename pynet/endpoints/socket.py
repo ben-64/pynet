@@ -82,16 +82,16 @@ class NetSocket(SOCKET):
     def set_cli_arguments(cls,parser):
         super().set_cli_arguments(parser)
         parser.add_argument("--destination","-d",metavar="IP",default="127.0.0.1",help="Destination Host")
-        parser.add_argument("--port","-p",metavar="PORT",type=int,help="Destination port")
-        parser.add_argument("--src-port","-s",metavar="PORT",type=int,help="Source port")
+        parser.add_argument("--port","-p",metavar="PORT",dest="dport",type=int,help="Destination port")
+        parser.add_argument("--src-port","-s",metavar="PORT",dest="sport",type=int,help="Source port")
 
-    def __init__(self,destination,port,src_port=None,transparent=False,*args,**kargs):
+    def __init__(self,destination,dport,sport=None,transparent=False,*args,**kargs):
         super().__init__(*args,**kargs)
         self.destination = destination
-        self.port = port
-        self.connect_addr = (self.destination,self.port)
+        self.dport = dport
+        self.connect_addr = (self.destination,self.dport)
         self.transparent = transparent
-        if src_port: self.bind_addr = ("0.0.0.0",src_port)
+        if sport: self.bind_addr = ("0.0.0.0",sport)
 
     def bind(self):
         if self.transparent:
@@ -124,14 +124,17 @@ class NetSocketListen(SOCKET):
     @classmethod
     def set_cli_arguments(cls,parser):
         super().set_cli_arguments(parser)
-        parser.add_argument("--bind","-b",metavar="IP",default="0.0.0.0",help="Destination Host")
-        parser.add_argument("--port","-p",metavar="PORT",type=int,required=True,help="Destination port")
+        parser.add_argument("--bind","-b",metavar="IP",default="0.0.0.0",help="Bind Address")
+        parser.add_argument("--port","-p",metavar="PORT",dest="sport",type=int,required=True,help="Bind port")
 
-    def __init__(self,port,bind="0.0.0.0",transparent=False,*args,**kargs):
+    def __init__(self,sport=None,bind="0.0.0.0",transparent=False,destination=None,dport=None,*args,**kargs):
         super().__init__(*args,**kargs)
         self.bind_ip = bind
-        self.port = port
-        self.bind_addr = (self.bind_ip,self.port)
+        self.sport = sport
+        self.destination = destination
+        self.dport = dport
+        self.bind_addr = (self.bind_ip,self.sport)
+        if destination and dport: self.connect_addr = (destination,self.dport)
         self.transparent = transparent
 
     def bind(self):
@@ -141,6 +144,11 @@ class NetSocketListen(SOCKET):
             # Because we will receive packet that were not for us
             self.sock.setsockopt(socket.SOL_IP, IP_TRANSPARENT, 1)
         super().bind()
+
+    def create_socket_client(self,*args,**kargs):
+        # Some configuration can be set from upper classes
+        kargs.update(self.get_conf())
+        return self.__class__(*args,**kargs)
 
 
 class UnixSocketReception(SOCKET):
@@ -178,7 +186,8 @@ class TCP_LISTEN(NetSocketListen):
     def accept(self):
         csock,caddr = self.sock.accept()
         #print("New client: %r" % (caddr,))
-        return SOCKET(sock=csock)
+        x = self.create_socket_client(sock=csock)
+        return x
 
     def bind(self):
         super().bind()
@@ -194,7 +203,6 @@ class TCP_LISTEN(NetSocketListen):
             return endpoint_client,(dst_ip,dst_port)
         else:
             return endpoint_client,None
-
 
 @Endpoint.register
 class UDP(NetSocket):
@@ -223,13 +231,12 @@ class UDP_LISTEN(NetSocketListen):
             data,c_addr = self.sock.recvfrom(4096,socket.MSG_PEEK)
             real_dst_addr = None
 
-        sock = UDP(sock=self.sock,destination=c_addr[0],port=c_addr[1])
-        sock.connect()
-        #print("New sock : %r" % (self.sock.fileno(),))
+        endpoint = self.create_socket_client(sock=self.sock,destination=c_addr[0],dport=c_addr[1])
+        endpoint.connect()
 
         # Recreate a new listening socket for potential new UDP clients
         self.init()
-        return sock,real_dst_addr
+        return endpoint,real_dst_addr
     
 
 @Endpoint.register
@@ -254,7 +261,7 @@ class UnixSocketListen(UnixSocketReception):
 
     def accept(self):
         csock,addr = self.sock.accept()
-        return SOCKET(sock=csock)
+        return create_socket_client(sock=csock)
 
     def bind(self):
         super().bind()
