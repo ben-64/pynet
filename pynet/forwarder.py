@@ -45,7 +45,7 @@ class Forwarder(object):
     def fw(self,receiver,sender,modules):
         """ Forward between receiver and sender. Return True if the communication has ended """
         try:
-            data = receiver.recv()
+            data = receiver.proto_recv()
         except EndpointClose:
             return True
 
@@ -53,15 +53,20 @@ class Forwarder(object):
         if data is None: return False
 
         from_client = receiver in self.forwarding_client
-        data = self.handle_data(data,from_client,modules)
 
-        # If Module returns None, it means that this packet won't be forwarded
-        if data is None: return False
+        if not type(data) is list:
+            data = [data]
 
-        try:
-            sender.send(data)
-        except EndpointClose:
-            return True
+        for msg in data:
+            msg = self.handle_data(msg,from_client,modules)
+
+            # If Module returns None, it means that this packet won't be forwarded
+            if msg is None: return False
+
+            try:
+                sender.proto_send(msg)
+            except EndpointClose:
+                return True
 
         return False
 
