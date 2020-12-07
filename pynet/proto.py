@@ -17,7 +17,7 @@ class Proto(object):
 
     @classmethod
     def register(cls,f):
-        PluginRegister.register(f)
+        ProtoRegister.register(f)
         return cls.registerer.register(f)
 
     @classmethod
@@ -39,28 +39,31 @@ class Proto(object):
             key = "__name__"
         return getattr(cls,key)
 
-    def add_layer(self,data):
+    def add(self,data):
         return data
 
-    def del_layer(self,data):
+    def remove(self,data):
         return data
 
     def __init__(self,*args,**kargs):
         self.args = DirectAccessDict(kargs)
 
 
-class NoProto(object):
+@Proto.register
+class NoProto(Proto):
     _desc_ = "No specific protocol"
 
 
-class LengthProto(object):
-    _desc_ = "Len proto"
+@Proto.register
+class LengthProto(Proto):
+    _desc_ = "Lenght protocol"
 
-    def __init__(self,fmt=">H",*args,**kargs):
+    def __init__(self,out=True,fmt=">H",*args,**kargs):
         super().__init__(*args,**kargs)
         self.buf = b""
         self.fmt = fmt
         self.fmt_sz = struct.calcsize(self.fmt)
+        self.out = out
 
     def add_layer(self,data):
         return struct.pack(self.fmt,len(data)) + data
@@ -96,3 +99,9 @@ class LengthProto(object):
                 if len(payload) < sz:
                     self.buf = data
                     return res
+
+    def add(self,data):
+        return self.add_layer(data) if self.out else self.del_layer(data)
+
+    def remove(self,data):
+        return self.del_layer(data) if self.out else self.add_layer(data)
