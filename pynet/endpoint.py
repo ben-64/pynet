@@ -48,8 +48,14 @@ class Endpoint(Plugin):
     def send(self,data):
         pass
 
+    def do_recv(self):
+        return self.recv()
+
+    def do_send(self,data):
+        return self.send(data)
+
     def proto_recv(self):
-        return self.proto.remove(self.recv())
+        return self.proto.remove(self.do_recv())
 
     def proto_send(self,data):
         data = data if type(data) is list else [data]
@@ -57,7 +63,7 @@ class Endpoint(Plugin):
             pkts = self.proto.add(d)
             pkts = pkts if type(pkts) is list else [pkts]
             for pkt in pkts:
-                self.send(pkt)
+                self.do_send(pkt)
 
 class InputEndpoint(Endpoint):
     EP2 = False
