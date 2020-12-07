@@ -26,6 +26,25 @@ pycat SSH_LISTEN -p 2222 -d ip -U user -P password Logger -H
  
 - Only basic MiTM can be done using this mechanism, for example Agent forwarding won't work. You have to use SSHProxy instead
 
+## Socks
+
+### SocksClient
+
+- It has to be used when you want to connect to a SOCKS server. Therefore you need to specify, the SOCKS server, and the final destination
+
+```bash
+pycat TCP-LISTEN -p 64240 SocksClient -d socks_ip -p socks-port -D final_ip -P final_port
+```
+
+### SocksServer
+
+- It is like a SOCKS server, this endpoint is supposed to receive SOCKS protocol, so dynamically it will connect to the server specified in the SOCKS protocol
+
+```bash
+pycat TCP-LISTEN -p 64240 SocksServer
+```
+
+
 # pyproxy
 
 ## TCP Proxy use cases
