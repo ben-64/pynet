@@ -57,13 +57,15 @@ class Logger(PassThrough):
         parser.add_argument("--color-server",metavar="COLOR",default="32",type=get_ansi_color,help="Color for client communication (default=32)")
         parser.add_argument("--no-color","-N",action="store_false",dest="color",help="Do not use colors")
         parser.add_argument("--output","-o",metavar="json",dest="output_json",help="Output json file")
+        parser.add_argument("--filter",metavar="PYTHON",dest="filterf",type=lambda p:eval(p),default=lambda p,s:True,help="Python function to apply in order to dispay or not packets. First parameters is the packet and second one is True if packet comes from client (ex:lamba p,c:len(p)>10)")
 
-    def __init__(self,no_log_request=False,no_log_response=False,hex=True,color=True,color_client="\033[31m",color_server="\033[32m",output_json=None,*args,**kargs):
+    def __init__(self,no_log_request=False,no_log_response=False,hex=True,color=True,color_client="\033[31m",color_server="\033[32m",output_json=None,filterf=lambda p:True,*args,**kargs):
         super().__init__(*args,**kargs)
         self.log_request = not no_log_request
         self.log_response = not no_log_response
         if output_json and os.path.exists(output_json): os.remove(output_json)
         self.fout = output_json
+        self.filterf = filterf
         if hex:
             self.output = hexdump
         else:
@@ -89,6 +91,7 @@ class Logger(PassThrough):
             json.dump(d,f)
         
     def handle(self,data,one):
+        if not self.filterf(data,one): return data
         if self.log_request and one:
             self.output(">",data,color=self.color_client)
         elif self.log_response and not one:
