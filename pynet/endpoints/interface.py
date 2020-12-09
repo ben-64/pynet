@@ -20,8 +20,8 @@ class Interface(Endpoint):
         super().set_cli_arguments(parser)
         parser.add_argument("--ip","-i",metavar="IP",help="Set IP address")
 
-    def __init__(self,name=None,ip=None):
-        super().__init__()
+    def __init__(self,name=None,ip=None,*args,**kargs):
+        super().__init__(*args,**kargs)
         self.name = name if name is not None else "\x00"*Interface.IFNAMSIZE
         # Socket used for ioctl
         self.sd = socket.socket(socket.AF_INET,socket.SOCK_DGRAM,socket.IPPROTO_IP)
@@ -63,23 +63,25 @@ class VirtualInterface(Interface):
 
     @classmethod
     def set_cli_arguments(cls,parser):
-        Interface.set_cli_arguments(parser)
+        super().set_cli_arguments(parser)
 
-    def __init__(self,name=None,ip=None,flags=IFF_TUN|IFF_NO_PI):
-        Interface.__init__(self,name,ip)
+    def __init__(self,name=None,ip=None,flags=IFF_TUN|IFF_NO_PI,*args,**kargs):
+        super().__init__(name=name,ip=ip,*args,**kargs)
         self.flags = flags
         self.fd = os.open(VirtualInterface.tun_file, os.O_RDWR)
         ifr = struct.pack("%usH" % Interface.IFNAMSIZE, self.name.encode(), flags)
         self.name = ioctl(self.fd, VirtualInterface.TUNSETIFF, ifr)
 
+
 @Endpoint.register
 class TUN(VirtualInterface):
     _desc_ = "TUN interface"
     def __init__(self,*args,**kargs):
-        super().__init__(self,flags=IFF_TUN|IFF_NO_PI,*args,**kargs)
+        super().__init__(name="pytun0",flags=VirtualInterface.IFF_TUN|VirtualInterface.IFF_NO_PI,*args,**kargs)
+
 
 @Endpoint.register
 class TAP(VirtualInterface):
     _desc_ = "TAP interface"
     def __init__(self,*args,**kargs):
-        super().__init__(self,flags=IFF_TAP|IFF_NO_PI,*args,**kargs)
+        super().__init__(name="pytap0",flags=VirtualInterface.IFF_TAP|VirtualInterface.IFF_NO_PI,*args,**kargs)
