@@ -278,3 +278,62 @@ class UnixSocketRecv(UnixSocketReception):
     _desc_ = "Unix Socket receive in datagram mode"
     _cmd_ = "UNIX-RECV"
     socket_type = socket.SOCK_DGRAM
+
+
+
+@Endpoint.register
+class EtherSocket(SOCKET):
+    ETH_P_ALL        = 0x0003
+    SIOCGIFINDEX     = 0x8933
+    IFNAMSIZE        = 16
+    SO_ATTACH_FILTER = 26
+
+    @classmethod
+    def set_cli_arguments(cls,parser):
+        super().set_cli_arguments(parser)
+        parser.add_argument("--iface","-i",metavar="INTERFACE",required=True,help="Ethernet card to use")
+        parser.add_argument("--bpf","-b",metavar="BPF_FILTER",type=lambda p: p.split(":"),help="BPF filter : ip:port")
+        parser.add_argument("--promisc",action="store_true",help="Set card in promisc mode")
+
+    def __init__(self,iface,bpf=None,promisc=False,*args,**kargs):
+        super().__init__(*args,**kargs)
+        self.iface = iface
+        self.bpf = bpf
+        self.promisc = promisc
+
+    def init(self):
+        self.create_socket()
+        if self.bpf: self.set_bpf_filter(self.bpf[0],self.bpf[1])
+        if self.promisc: self.set_promisc(self.promisc)
+        self.bind()
+
+    def create_socket(self):
+        self.sock = socket.socket(socket.AF_PACKET,socket.SOCK_RAW,socket.ntohs(EtherSocket.ETH_P_ALL))
+
+    def bind(self):
+        self.sock.bind((self.iface,0))
+
+    def get_interface_index(self):
+        """ Associate socket to interface name """
+        #ifr = .pack("%us" % Interface.IFNAMSIZE, self.iface)
+        #ioctl(self.sock, EtherSocket.SIOCGIFINDEX, ifr)
+        return socket.if_nametoindex(self.iface)
+
+    def set_bpf_filter(self,host,port):
+        from pynet.tools.bpf import BPFNetwork
+
+        # Build BPF filter
+        bpf_filter = BPFNetwork(host,int(port)).build()
+
+        # Create internal Linux Structure
+        from ctypes import create_string_buffer, addressof
+        sz_filter = int(len(bpf_filter)/8)
+        bpf_filter = create_string_buffer(bpf_filter)
+        bpf_filter_addr = addressof(bpf_filter)  
+        bpf_struct = struct.pack('HL', sz_filter, bpf_filter_addr)
+
+        # Attach filter
+        self.sock.setsockopt(socket.SOL_SOCKET, EtherSocket.SO_ATTACH_FILTER, bpf_struct)
+
+    def set_promisc(self,promisc=True):
+        pass
