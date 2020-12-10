@@ -72,6 +72,16 @@ You have to configure this interface `pytap0` is you want to use it for other pu
 - If you want to get a different MAC address, be sure to set `eth0` in promiscous mode (by using the `--promisc` option). Otherwise, you won't see any traffic destinated to your MAC, because `eth0` won't see it. Be sure to use a different IP address, because some nasty things could happen (multiple MAC for the same IP).
 - If you want to use the same MAC address and the same IP Adress, be sure to block traffic the outgoing traffic on the server, otherwise you will open communication, than the server itself will cut, because it never opened it.
 
+### TCP Tunnel
+
+Be careful, if you use a SOCK_STREAM oriented protocol, such as TCP, you may have some troubles, because network interfaces are datgram oriented. It means that some datagrams can be splitted, or merged before being sent to the interface.
+You should use the `LengthProto` using `--proto` option for such endpoints. Every datagram will be prefixed by its length and this length will be removed by the orther endpoing ensuring that datagram are not splitted/merged. You can find more information about protocols [here](proto.md).
+
+```bash
+pycat TCP-LISTEN --proto "LengthProto()" -p 64240 Interface -i eth0 --bpf ip_client:64240
+pycat TAP -i pytap0 TCP --proto "LengthProto()" -d server_ip -p 64240
+```
+
 
 # pyproxy
 
