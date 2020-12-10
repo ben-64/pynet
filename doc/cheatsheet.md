@@ -132,7 +132,7 @@ pyproxy SSHProxy -p 2222 --server-ip ip --server-port 22 -U user Logger -H
 On host IP_a:
 
 ```bash
-pytun -i 192.168.64.1 TCP -d IP_b -p 8443
+pytun -a 192.168.64.1 TCP -d IP_b -p 8443
 ```
 
 It will create a tun0 interface with IP 102.168.64.1. Everything sends to this IP will be tunnelled inside the TCP tunnel established on port 8443 between IP_a and IP_b.
@@ -140,5 +140,5 @@ It will create a tun0 interface with IP 102.168.64.1. Everything sends to this I
 On Host IP_b:
 
 ```bash
-pytun -s -i 192.168.64.2 TCP-LISTEN -p 8443
+pytun -s -a 192.168.64.2 TCP-LISTEN -p 8443
 ```
