@@ -33,14 +33,16 @@ class Forwarder(object):
 
     def remove(self,sender):
         if sender in self.forwarding_client:
-            del(self.forwarding_client[sender])
             self.stop_forward(sender)
             sender.close()
+            self.forwarding_client[sender].close()
+            del(self.forwarding_client[sender])
 
         if sender in self.forwarding_server:
-            del(self.forwarding_server[sender])
             self.stop_forward(sender)
             sender.close()
+            self.forwarding_server[sender].close()
+            del(self.forwarding_server[sender])
 
     def fw(self,receiver,sender,modules):
         """ Forward between receiver and sender. Return True if the communication has ended """
