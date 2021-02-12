@@ -3,6 +3,7 @@
 
 import sys
 import select
+from queue import Queue
 
 from pynet.endpoint import *
 
@@ -59,3 +60,22 @@ class STANDARD(STDIN,STDOUT):
 
     def close(self):
         self.stop = True
+
+
+@Endpoint.register
+class ECHO(Endpoint):
+    _desc_ = "Returns what it receives"
+    _cmd_ = "ECHO"
+
+    def __init__(self,*args,**kargs):
+        super().__init__(*args,**kargs)
+        self.q = Queue()
+
+    def send(self,data):
+        self.q.put_nowait(data)
+
+    def recv(self):
+        return self.q.get()
+ 
+
+
