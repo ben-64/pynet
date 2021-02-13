@@ -14,14 +14,20 @@ from pynet.module import Module,PassThrough,ModuleContainer
 from pynet.endpoint import InputEndpoint,OutputEndpoint
 from pynet.plugin import Plugin
 
+logger = logging.getLogger("RELAY")
+logger.setLevel(logging.WARNING)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
 
-class Relay(object):
-    def __init__(self,first_endpoint,second_endpoint,module=ModuleContainer(PassThrough,{}),forwarder=ThreadForwarder):
+
+class AbstractRelay(object):
+    def __init__(self,module=ModuleContainer(PassThrough,{}),forwarder=ThreadForwarder):
         self.modules = [module]
-        self.first_endpoint = first_endpoint
-        self.second_endpoint = second_endpoint
-        self.forwarder = forwarder(self.modules)
-        self.stop = False
+        self.forwarder_cls = forwarder
+
+    def instanciate_forwarder(self,ep1,ep2,end_forwarder_cb=None):
+        return self.forwarder_cls(ep1,ep2,self.modules,end_forwarder_cb)
 
     def run(self):
         try:
@@ -31,30 +37,68 @@ class Relay(object):
         self.close()
 
     def do_run(self):
-        self.first_endpoint.init()
-        self.second_endpoint.init()
-        self.forwarder.add(self.first_endpoint,self.second_endpoint)
-        while not self.stop:
-            time.sleep(1)
+        pass
+
+    def close(self):
+        pass
+
+
+class Relay(AbstractRelay):
+    def __init__(self,first_endpoint,second_endpoint,module=ModuleContainer(PassThrough,{}),forwarder=ThreadForwarder):
+        super().__init__(module,forwarder)
+        self.ep1 = first_endpoint
+        self.ep2 = second_endpoint
+
+    def do_run(self):
+        self.forwarder = self.instanciate_forwarder(self.ep1,self.ep2)
+        self.ep1.init()
+        self.ep2.init()
+        logger.debug("relay starting forwarder %r" % (self.forwarder,))
+        self.forwarder.run()
 
     def close(self):
         self.forwarder.close()
 
 
-class MultipleClientRelay(Relay):
+class MultipleRelay(AbstractRelay):
+    def __init__(self,*args,**kargs):
+        super().__init__(*args,**kargs)
+        self.forwarders = []
+
+    def end_forwarder(self,forwarder):
+        """ Callback called by a forwarder when it ends """
+        self.forwarders.remove(forwarder)
+        logger.debug("Remove forwarder %r" % (forwarder,))
+
+    def close(self):
+        logger.debug("Closing Multiple relay")
+        for fwd in self.forwarders:
+            fwd.close()
+
+    def add(self,ep1,ep2):
+        fwd = self.instanciate_forwarder(ep1,ep2,self.end_forwarder)
+        self.forwarders.append(fwd)
+        fwd.start()
+
+
+class MultipleClientRelay(MultipleRelay):
+    def __init__(self,first_endpoint,second_endpoint,*args,**kargs):
+        super().__init__(*args,**kargs)
+        self.ep1 = first_endpoint
+        self.ep2 = second_endpoint
+        self.stop = False
+
     def do_run(self):
-        self.first_endpoint.init()
+        self.ep1.init()
         while not self.stop:
-            client,_ = self.first_endpoint.handle_new_client()
-            server = self.second_endpoint.duplicate()
+            client,_ = self.ep1.handle_new_client()
+            server = self.ep2.duplicate()
             server.init()
-            self.forwarder.add(client,server)
-            #print("CLIENTS: %s" % (",".join(["%u:%u" % (k.sock.fileno(),v.sock.fileno()) for k,v in self.forwarder.forwarding_client.items()])))
-            #print("SERVERS: %s" % (",".join(["%u:%u" % (k.sock.fileno(),v.sock.fileno()) for k,v in self.forwarder.forwarding_server.items()])))
+            self.add(client,server)
 
     def close(self):
         super().close()
-        self.first_endpoint.close()
+        self.stop = False
 
 
 class ProxyRegister(Register):
@@ -71,10 +115,9 @@ class Proxy(Plugin):
     def set_cli_arguments(cls,parser):
         parser.add_argument("--console",action="store_true",help="Activate IPython console")
 
-    def __init__(self,module=ModuleContainer(PassThrough,{}),console=None,forwarder=ThreadForwarder,*args,**kargs):
+    def __init__(self,module=ModuleContainer(PassThrough,{}),console=None,relay=MultipleRelay,*args,**kargs):
         super().__init__(*args,**kargs)
-        self.modules = [module]
-        self.forwarder = forwarder(self.modules)
+        self.relay = relay(module)
         self.console = console
         self.stop = False
         if console:
@@ -88,4 +131,9 @@ class Proxy(Plugin):
         pass
 
     def run(self):
-        raise NotImplementedError()
+        try:
+            self.do_run()
+        except KeyboardInterrupt:
+            pass
+        self.relay.close()
+        self.close()

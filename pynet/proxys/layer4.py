@@ -87,9 +87,9 @@ class Layer4Proxy(Proxy):
         endpoint_server = self.create_server_side(dst_ip,dst_port,sport)
         endpoint_server.init()
 
-        self.forwarder.add(endpoint_client,endpoint_server)
+        self.relay.add(endpoint_client,endpoint_server)
 
-    def run(self):
+    def do_run(self):
         self.init()
         while not self.stop:
             client,real_dst_addr = self.client_side.handle_new_client()

@@ -151,7 +151,7 @@ class SSHChannelProxy(Proxy):
 
     def handle_new_channel(self,endpoint_client):
         endpoint_server = SSHChannel(self.ssh_server.chans[endpoint_client.channel.chanid])
-        self.forwarder.add(endpoint_server,endpoint_client) 
+        self.relay.add(endpoint_server,endpoint_client) 
 
     def run(self):
         while not self.stop:

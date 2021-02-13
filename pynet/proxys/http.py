@@ -28,4 +28,4 @@ class HTTPSProxy(TLSProxy):
         endpoint_server = self.create_server_side(dst_ip,dst_port)
         endpoint_server.init()
 
-        self.forwarder.add(endpoint_client,endpoint_server)
+        self.forwarder.replay(endpoint_client,endpoint_server)
