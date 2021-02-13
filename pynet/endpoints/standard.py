@@ -31,13 +31,14 @@ class STDIN(InputEndpoint):
                 return data
             else:
                 pass
+        raise EndpointClose()
 
     def close(self):
         self.stop = True
 
 
 @Endpoint.register
-class DEVNULL(OutputEndpoint):
+class DEVNULL(Endpoint):
     _desc_ = "Ignore data"
     pass
 
@@ -77,5 +78,3 @@ class ECHO(Endpoint):
     def recv(self):
         return self.q.get()
  
-
-
