@@ -30,6 +30,7 @@ class Endpoint(Plugin):
     def __init__(self,proto=NoProto(),*args,**kargs):
         super().__init__(*args,**kargs)
         self.proto = proto
+        self.stop = False
 
     def get_conf(self):
         """ Use if we need to duplicate EndPoint, to keep the mandatory parameters """
@@ -39,19 +40,14 @@ class Endpoint(Plugin):
         pass
 
     def close(self):
-        pass
-
-    def recv(self):
-        """ Call to receive data """
-        pass
-
-    def send(self,data):
-        pass
+        self.stop = True
 
     def do_recv(self):
+        if self.stop: raise EndpointClose()
         return self.recv()
 
     def do_send(self,data):
+        if self.stop: raise EndpointClose()
         return self.send(data)
 
     def proto_recv(self):
@@ -65,8 +61,25 @@ class Endpoint(Plugin):
             for pkt in pkts:
                 self.do_send(pkt)
 
+    def __repr__(self):
+        return "%s" % (self.__class__.__name__,)
+
+
 class InputEndpoint(Endpoint):
-    EP2 = False
+    def recv(self):
+        pass
+
 
 class OutputEndpoint(Endpoint):
-    EP1 = False
+    def send(self,data):
+        pass
+
+
+class InputOutputEndpoint(Endpoint):
+    def recv(self):
+        pass
+
+    def send(self,data):
+        pass
+
+
