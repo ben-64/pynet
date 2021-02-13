@@ -34,7 +34,7 @@ class TLSProxy(TCPProxy):
         super().__init__(*args,**kargs)
 
     def create_client_side(self):
-        return self.CLIENT_ENDPOINT(bind=self.host,port=self.port,certificate=self.certificate,key=self.key,tls_version=self.tls_version,tls_ciphers=self.tls_ciphers)
+        return self.CLIENT_ENDPOINT(bind=self.host,sport=self.port,certificate=self.certificate,key=self.key,tls_version=self.tls_version,tls_ciphers=self.tls_ciphers)
 
     def create_server_side(self,dest,dport,sport):
-        return self.SERVER_ENDPOINT(destination=dest,port=dport,src_port=sport,certificate=self.client_certificate,key=self.client_key,tls_version=self.tls_version,tls_ciphers=self.tls_ciphers)
+        return self.SERVER_ENDPOINT(destination=dest,dport=dport,sport=sport,certificate=self.client_certificate,key=self.client_key,tls_version=self.tls_version,tls_ciphers=self.tls_ciphers)
