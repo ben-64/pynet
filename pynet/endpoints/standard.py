@@ -77,4 +77,7 @@ class ECHO(Endpoint):
 
     def recv(self):
         return self.q.get()
+
+    def close(self):
+        self.q.put_nowait(None)
  
