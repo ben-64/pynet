@@ -154,8 +154,8 @@ class ThreadForwarder(Forwarder):
 
     def close(self):
         # It can have been already closed and removed from the list in wait_until_end
-        logger.debug("Closing forwarder [%r:%r]" % (self.threads[0].ep1,self.threads[0].ep2))
         try:
+            logger.debug("Closing forwarder [%r:%r]" % (self.threads[0].ep1,self.threads[0].ep2))
             self.threads[0].ep1.close()
             self.threads[0].ep2.close()
         except IndexError:
