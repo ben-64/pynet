@@ -34,6 +34,7 @@ class AbstractRelay(object):
             self.do_run()
         except KeyboardInterrupt:
             pass
+        self.close()
 
     def do_run(self):
         pass
@@ -89,11 +90,14 @@ class MultipleClientRelay(MultipleRelay):
 
     def do_run(self):
         self.ep1.init()
-        while not self.stop:
-            client,_ = self.ep1.handle_new_client()
-            server = self.ep2.duplicate()
-            server.init()
-            self.add(client,server)
+        try:
+            while not self.stop:
+                client,_ = self.ep1.handle_new_client()
+                server = self.ep2.duplicate()
+                server.init()
+                self.add(client,server)
+        except KeyboardInterrupt:
+            self.stop = True
 
     def close(self):
         super().close()

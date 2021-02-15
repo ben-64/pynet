@@ -97,6 +97,7 @@ class ThreadForwarder(Forwarder):
         """ Thread forwarding data from ep1 to ep2 """
         def __init__(self,ep1,ep2,from_ep1,forwarder):
             super().__init__()
+            self.daemon = True
             self.ep1 = ep1
             self.ep2 = ep2
             self.from_ep1 = from_ep1
