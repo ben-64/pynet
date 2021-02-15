@@ -39,8 +39,12 @@ class Endpoint(Plugin):
     def init(self):
         pass
 
-    def close(self):
+    def do_close(self):
         self.stop = True
+        self.close()
+
+    def close(self):
+        pass
 
     def do_recv(self):
         if self.stop: raise EndpointClose()

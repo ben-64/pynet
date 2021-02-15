@@ -92,7 +92,7 @@ class SSH(TCP):
             elif self.invoke_shell:
                 self.shell_channel.send(data)
         except:
-            self.close()
+            self.do_close()
             raise EndpointClose()
 
     def recv(self):
@@ -187,7 +187,7 @@ class SSHListeningChannel(Endpoint):
         data = self.channel.recv(4096)
 
         if len(data) == 0:
-            self.close()
+            self.do_close()
             raise EndpointClose()
 
         return data
@@ -197,7 +197,7 @@ class SSHListeningChannel(Endpoint):
             self.channel.sendall(data)
             #print("Sent : %r" % (data,))
         except:
-            self.close()
+            self.do_close()
             raise EndpointClose()
 
 
@@ -213,7 +213,7 @@ class SSHChannel(Endpoint):
         data = self.channel.recv(4096)
 
         if len(data) == 0:
-            self.close()
+            self.do_close()
             raise EndpointClose()
 
         return data
@@ -222,5 +222,5 @@ class SSHChannel(Endpoint):
         try:
             self.channel.sendall(data)
         except:
-            self.close()
+            self.do_close()
             raise EndpointClose()

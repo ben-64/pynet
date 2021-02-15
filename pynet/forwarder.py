@@ -39,7 +39,7 @@ class Forwarder(object):
             logger.debug("Received data from %r [%r]" % (receiver,data))
         except EndpointClose:
             logger.debug("Receiver %r has closed, closing sender %r" % (receiver,sender))
-            sender.close()
+            sender.do_close()
             return True
 
         # If endpoint returns None, we won't send it to modules
@@ -59,7 +59,7 @@ class Forwarder(object):
                 logger.debug("Sending data to %r" % (sender,))
             except EndpointClose:
                 logger.debug("Sender %r has closed, closing receiver %r" % (sender,receiver))
-                receiver.close()
+                receiver.do_close()
                 return True
 
         return False
@@ -140,7 +140,11 @@ class ThreadForwarder(Forwarder):
 
     def end_thread(self,thread):
         """ Callback called by a thread when it ends """
-        self.threads.remove(thread)
+        try:
+            # Might already have been removed
+            self.threads.remove(thread)
+        except ValueError:
+            pass
         logger.debug("End fwd between %r and %r" % (thread.ep1,thread.ep2))
 
         # If there is no more threads, and a callback is defined, forwarder is terminated
@@ -149,8 +153,8 @@ class ThreadForwarder(Forwarder):
 
     def close(self):
         # It can have been already closed and removed from the list in wait_until_end
+        logger.debug("Closing forwarder [%r:%r]" % (self.threads[0].ep1,self.threads[0].ep2))
         try:
-            logger.debug("Closing forwarder [%r:%r]" % (self.threads[0].ep1,self.threads[0].ep2))
             self.threads[0].ep1.close()
             self.threads[0].ep2.close()
         except IndexError:

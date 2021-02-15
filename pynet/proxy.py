@@ -34,7 +34,6 @@ class AbstractRelay(object):
             self.do_run()
         except KeyboardInterrupt:
             pass
-        self.close()
 
     def do_run(self):
         pass

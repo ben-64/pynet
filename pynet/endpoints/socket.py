@@ -59,7 +59,7 @@ class SOCKET(Endpoint):
         try:
             self.sock.send(data)
         except:
-            self.close()
+            self.do_close()
             raise EndpointClose()
 
     def recv(self):
@@ -68,7 +68,7 @@ class SOCKET(Endpoint):
         except:
             data = ""
         if len(data) == 0:
-            self.close()
+            self.do_close()
             raise EndpointClose()
         return data
 
