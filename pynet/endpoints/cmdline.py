@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import select
 import readline
+import termios
 from queue import Queue
 from threading import Lock
+import atexit
 
 from pynet.endpoint import *
 
@@ -25,6 +28,25 @@ class CmdLine(Endpoint):
         self.log = log
         self.q = Queue()
         self.log_lock = Lock()
+        self.ctrl_c_value = None
+
+    def disable_ctrl_c(self):
+        """ Configure terminal to not send SIGINT in case of CTRL-C """
+        termios_attr = termios.tcgetattr(sys.stdin)
+
+        # 6 =>  cc_t c_cc[NCCS] of struct termios
+        # 0 => VINTR : character sent to raise SIGINT
+        if self.ctrl_c_value is None: self.ctrl_c_value = termios_attr[6][0]
+
+        # Disable SIGINT
+        termios_attr[6][0] = 0
+        termios.tcsetattr(sys.stdin, termios.TCSANOW, termios_attr)
+
+    def restore_ctrl_c(self):
+        if not self.ctrl_c_value is None:
+            termios_attr = termios.tcgetattr(sys.stdin)
+            termios_attr[6][0] = self.ctrl_c_value
+            termios.tcsetattr(sys.stdin, termios.TCSANOW, termios_attr)
 
     def write_log(self,data):
         if self.log:
@@ -41,9 +63,13 @@ class CmdLine(Endpoint):
                 self.q.put_nowait(cmd)
 
     def init(self):
+        atexit.register(self.restore_ctrl_c)
+        readline.parse_and_bind("'\C-c':'send_remote_ctrl_c\012'")
+        self.disable_ctrl_c()
         self.exec_rc_commands()
 
     def recv_stdin(self):
+        self.disable_ctrl_c()
         return input() + "\n"
 
     def _cmd_recv(self):
@@ -69,5 +95,11 @@ class CmdLine(Endpoint):
         sys.stdout.buffer.write(data)
         sys.stdout.buffer.flush()
 
+    def do_send_remote_ctrl_c(self,args):
+        self.q.put_nowait("\x03")
+
     def do_quit(self,args):
         self.do_close()
+
+    def close(self):
+        self.restore_ctrl_c()
