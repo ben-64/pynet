@@ -69,7 +69,6 @@ class CmdLine(Endpoint):
         self.exec_rc_commands()
 
     def recv_stdin(self):
-        self.disable_ctrl_c()
         return input() + "\n"
 
     def _cmd_recv(self):
