@@ -77,6 +77,10 @@ class TLS_LISTEN(TCP_LISTEN):
         self.tls_version = tls_version
         self.ciphers = tls_ciphers
 
+    def get_conf(self):
+        """ Use if we need to duplicate EndPoint, to keep the mandatory parameters """
+        return {"proto":self.proto, "certificate":self.certificate, "key":self.key, "tls_version":self.tls_version, "ciphers":self.ciphers}
+
     def create_socket(self):
         tcp_sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         self.sock = ssl.wrap_socket(tcp_sock,keyfile=self.key,certfile=self.certificate,ssl_version=tls_version[self.tls_version],ciphers=self.ciphers)
