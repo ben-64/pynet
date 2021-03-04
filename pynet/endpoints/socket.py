@@ -261,7 +261,7 @@ class UnixSocketListen(UnixSocketReception):
 
     def accept(self):
         csock,addr = self.sock.accept()
-        return create_socket_client(sock=csock)
+        return self.create_socket_client(sock=csock,bind=self.bind_addr)
 
     def bind(self):
         super().bind()
@@ -271,6 +271,11 @@ class UnixSocketListen(UnixSocketReception):
         """ Handle the connection of a new client """
         endpoint_client = self.accept()
         return endpoint_client,None
+
+    def create_socket_client(self,*args,**kargs):
+        # Some configuration can be set from upper classes
+        kargs.update(self.get_conf())
+        return self.__class__(*args,**kargs)
 
 
 @Endpoint.register
