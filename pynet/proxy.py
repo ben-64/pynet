@@ -129,6 +129,7 @@ class Proxy(Plugin):
 
     def __init__(self,module=ModuleContainer(PassThrough,{}),console=None,relay=MultipleRelay,*args,**kargs):
         super().__init__(*args,**kargs)
+        self.module = module
         self.relay = relay(module)
         self.console = console
         self.stop = False
