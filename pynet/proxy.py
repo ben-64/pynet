@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 from copy import copy
 import time
+from threading import Thread
 
 from pynet.forwarder import ThreadForwarder
 from pynet.tools.utils import Register
@@ -113,6 +114,15 @@ class Proxy(Plugin):
     _desc_ = "Default Proxy"
     registerer = ProxyRegister
 
+    class BackgroundTask(Thread):
+        def __init__(self,proxy):
+            super().__init__()
+            self.daemon = True
+            self.proxy = proxy
+
+        def run(self):
+            self.proxy.run()
+
     @classmethod
     def set_cli_arguments(cls,parser):
         parser.add_argument("--console",action="store_true",help="Activate IPython console")
@@ -131,6 +141,10 @@ class Proxy(Plugin):
 
     def close(self):
         pass
+
+    def start(self):
+        self.thread = Proxy.BackgroundTask(self)
+        self.thread.start()
 
     def run(self):
         try:
