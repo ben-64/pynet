@@ -31,23 +31,23 @@ class Layer4Proxy(Proxy):
         tproxy.add_argument("--no-tproxy-netfilter",action="store_false",dest="tproxy_netfilter",help="Configure netfilter system for tproxy")
         tproxy.add_argument("--bridge",action="store_true",help="Proxy mode is in bridged mode")
 
-    def __init__(self,*args,**kargs):
+    def __init__(self,port=8080,bind="0.0.0.0",src_port=None,server_ip="127.0.0.1",server_port=None,mirror=False,transparent=False,tproxy_chain="INTERCEPT",tproxy_mark="MARK",tproxy_table="TABLE",tproxy_client_iface="eth0",tproxy_server_iface="eth1",tproxy_specific_filter="",bridge=False,tproxy_netfilter=True,*args,**kargs):
         super().__init__(*args,**kargs)
-        self.port = self.args.port
-        self.host = self.args.bind
-        self.server_ip = self.args.server_ip
-        self.server_port = self.args.server_port
-        self.src_port = self.args.src_port
+        self.port = port
+        self.host = bind
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.src_port = src_port
         self.dst = (self.server_ip,self.server_port)
-        self.mirror = self.args.mirror
-        self.transparent = self.args.transparent
-        self.bridge = self.args.bridge
+        self.mirror = mirror
+        self.transparent = transparent
+        self.bridge = bridge
 
-        if self.transparent and args.tproxy_netfilter:
-            self.netfilter_configurator = TProxyConfigurator(self.port,self._proto_,args.tproxy_chain,args.tproxy_mark,args.tproxy_table,args.tproxy_client_iface,args.tproxy_server_iface,args.tproxy_specific_filter)
+        if self.transparent and tproxy_netfilter:
+            self.netfilter_configurator = TProxyConfigurator(self.port,self._proto_,tproxy_chain,tproxy_mark,tproxy_table,tproxy_client_iface,tproxy_server_iface,tproxy_specific_filter)
             self.netfilter_configurator.configure()
             if self.bridge:
-                self.bridge_configurator = BridgeConfigurator(args.tproxy_client_iface,args.tproxy_server_iface)
+                self.bridge_configurator = BridgeConfigurator(tproxy_client_iface,tproxy_server_iface)
                 self.bridge_configurator.configure()
 
         self.client_side = self.create_client_side()
