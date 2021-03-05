@@ -13,7 +13,7 @@ class ModuleRegister(Register):
     registry = defaultdict(dict)
 
 class ModuleContainer(object):
-    def __init__(self,module_cls,module_args,*args,**kargs):
+    def __init__(self,module_cls,module_args={},*args,**kargs):
         self.cls = module_cls
         self.args = module_args
 
