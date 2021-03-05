@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from threading import Thread
 import logging
 from collections import defaultdict
 from copy import copy
