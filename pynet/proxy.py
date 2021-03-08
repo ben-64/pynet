@@ -30,11 +30,15 @@ class AbstractRelay(object):
         return self.forwarder_cls(ep1,ep2,self.modules,end_forwarder_cb)
 
     def run(self):
+        self.init()
         try:
             self.do_run()
         except KeyboardInterrupt:
             pass
         self.close()
+
+    def init(self):
+        pass
 
     def do_run(self):
         pass
@@ -49,10 +53,12 @@ class Relay(AbstractRelay):
         self.ep1 = first_endpoint
         self.ep2 = second_endpoint
 
-    def do_run(self):
-        self.forwarder = self.instanciate_forwarder(self.ep1,self.ep2)
+    def init(self):
         self.ep1.init()
         self.ep2.init()
+
+    def do_run(self):
+        self.forwarder = self.instanciate_forwarder(self.ep1,self.ep2)
         logger.debug("relay starting forwarder %r" % (self.forwarder,))
         self.forwarder.run()
 
@@ -88,8 +94,10 @@ class MultipleClientRelay(MultipleRelay):
         self.ep2 = second_endpoint
         self.stop = False
 
-    def do_run(self):
+    def init(self):
         self.ep1.init()
+
+    def do_run(self):
         try:
             while not self.stop:
                 client,_ = self.ep1.handle_new_client()
