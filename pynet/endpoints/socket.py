@@ -4,6 +4,7 @@
 import sys
 import os
 import socket
+import stat
 
 from pynet.endpoint import *
 from pynet.tools.utils import remove_argument
@@ -164,6 +165,8 @@ class UnixSocketReception(SOCKET):
     def __init__(self,bind,abstract=False,*args,**kargs):
         super().__init__(*args,**kargs)
         self.bind_addr = "\x00" + bind if abstract else bind
+        if not abstract and os.path.exists(bind) and stat.S_ISSOCK(os.stat(bind).st_mode):
+            os.remove(bind)
 
     def close(self):
         super().close()
