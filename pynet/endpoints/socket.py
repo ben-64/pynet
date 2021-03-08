@@ -168,7 +168,10 @@ class UnixSocketReception(SOCKET):
     def close(self):
         super().close()
         if self.bind_addr[0] != "\x00":
-            os.remove(self.bind_addr)
+            try:
+                os.remove(self.bind_addr)
+            except FileNotFoundError:
+                pass
  
 
 @Endpoint.register
@@ -215,7 +218,6 @@ class UDP_LISTEN(NetSocketListen):
     _cmd_ = "UDP-LISTEN"
     _desc_ = "UDP Server"
     socket_type = socket.SOCK_DGRAM
-
     def handle_new_client(self):
         """ Handle the connection of a new client """
         # Read without consuming data, to get client addr
