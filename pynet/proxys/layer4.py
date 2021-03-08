@@ -5,7 +5,7 @@ import sys
 import os
 
 from pynet.proxy import Proxy
-from pynet.endpoints.socket import TCP,TCP_LISTEN,UDP,UDP_LISTEN
+from pynet.endpoints.socket import *
 from pynet.proxys.tproxy import TProxyConfigurator,BridgeConfigurator
 
 class Layer4Proxy(Proxy):
@@ -107,3 +107,44 @@ class UDPProxy(Layer4Proxy):
     _desc_ = "UDP Proxy"
     CLIENT_ENDPOINT = UDP_LISTEN
     SERVER_ENDPOINT = UDP
+
+@Proxy.register
+class UnixSocketProxy(Proxy):
+    _desc_ = "Unix stream socket proxy"
+    CLIENT_ENDPOINT = UnixSocketListen
+    SERVER_ENDPOINT = UnixSocketConnect
+
+    @classmethod
+    def set_cli_arguments(cls,parser):
+        super().set_cli_arguments(parser)
+        parser.add_argument("-b","--bind",metavar="PATH",required=True,help="Unix socket to bind to")
+        parser.add_argument("--destination","-d",metavar="PATH",required=True,help="Unix socket destination")
+
+    def __init__(self,bind,destination,*args,**kargs):
+        super().__init__(*args,**kargs)
+        self.bind_addr = bind
+        self.destination = destination
+        self.client_side = self.create_client_side()
+
+    def init(self):
+        self.client_side.init()
+ 
+    def create_client_side(self):
+        return self.CLIENT_ENDPOINT(bind=self.bind_addr)
+
+    def create_server_side(self):
+        return self.SERVER_ENDPOINT(destination=self.destination)
+
+    def handle_new_connection(self,endpoint_client):
+        """ Handle a new data coming to the socket """
+
+        endpoint_server = self.create_server_side()
+        endpoint_server.init()
+
+        self.relay.add(endpoint_client,endpoint_server)
+
+    def do_run(self):
+        self.init()
+        while not self.stop:
+            client,real_dst_addr = self.client_side.handle_new_client()
+            self.handle_new_connection(client)
