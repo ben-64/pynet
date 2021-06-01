@@ -74,7 +74,7 @@ class STDOUT(OutputEndpoint):
     _desc_ = "Output standard"
 
     def send(self,data):
-        sys.stdout.buffer.write(data)
+        sys.stdout.buffer.write(bytes(data))
         sys.stdout.flush()
 
 
