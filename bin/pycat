@@ -39,4 +39,7 @@ def main():
 
 
 if __name__ == "__main__":
+   if len(sys.argv) == 1:
+       print("No endpoint selected use -h to get help")
+       sys.exit(0)
    sys.exit(main())
