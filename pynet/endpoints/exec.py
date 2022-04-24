@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import subprocess,shlex
 from threading import Event
 
@@ -22,21 +23,27 @@ class Exec(Endpoint):
         self.is_cmd_running = Event()
         self.is_cmd_running.clear()
 
-    def start_cmd(self):
-        self.process = subprocess.Popen(self.cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        self.is_cmd_running.set()
-
-    def send(self,data):
+    def init(self):
         if not self.is_cmd_running.is_set():
             self.start_cmd()
 
+    def start_cmd(self):
+        self.process = subprocess.Popen(self.cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        os.set_blocking(self.process.stdout.fileno(), False)
+        self.is_cmd_running.set()
+
+    def send(self,data):
         self.process.stdin.write(data)
         self.process.stdin.flush()
 
     def recv(self):
         while self.is_cmd_running.wait(0.5):
-            data = self.process.stdout.readline()
-            if len(data) == 0:
-                self.is_cmd_running.clear()
+            data = self.process.stdout.read()
+            if self.process.poll() == 0:
+                print("End command")
+                raise EndpointClose()
+            if not data or len(data) == 0:
+                pass
+                #self.is_cmd_running.clear()
             else:
                 return data
