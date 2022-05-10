@@ -4,7 +4,9 @@
 import sys
 import os
 import subprocess,shlex
-from threading import Event
+import pty
+import tty
+import fcntl
 
 from pynet.endpoint import *
 
@@ -17,33 +19,51 @@ class Exec(Endpoint):
         super().set_cli_arguments(parser)
         parser.add_argument("--command","-c",metavar="COMMAND",required=True,help="Command to execute")
 
-    def __init__(self,command,*args,**kargs):
+    def __init__(self,command,use_pty=True,*args,**kargs):
         super().__init__(*args,**kargs)
+        self.use_pty = use_pty
         self.cmd = shlex.split(command)
-        self.is_cmd_running = Event()
-        self.is_cmd_running.clear()
+
+        # Create a pty that will be given to the program
+        # In order to avoid libc buffering
+        self.master, self.slave = self.get_pty()
+
+        self.stdin = subprocess.PIPE
+        self.stdout = self.slave
+        self.stderr = self.slave
 
     def init(self):
-        if not self.is_cmd_running.is_set():
-            self.start_cmd()
+        self.start_cmd()
+
+        self.process.stdout = os.fdopen(os.dup(self.master),'r+b', 0)
+        self.process.stderr = os.fdopen(os.dup(self.master),'r+b', 0)
+        os.close(self.master)
+        os.close(self.slave)
+
+        # Set non blocking mode
+        fd = self.process.stdout.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+    def get_pty(self):
+        master,slave = pty.openpty()
+        tty.setraw(master)
+        tty.setraw(slave)
+        return master,slave
 
     def start_cmd(self):
-        self.process = subprocess.Popen(self.cmd,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-        os.set_blocking(self.process.stdout.fileno(), False)
-        self.is_cmd_running.set()
+        self.process = subprocess.Popen(self.cmd,shell=True,stdin=self.stdin,stdout=self.stdout,stderr=self.stdout)
 
     def send(self,data):
         self.process.stdin.write(data)
         self.process.stdin.flush()
 
     def recv(self):
-        while self.is_cmd_running.wait(0.5):
-            data = self.process.stdout.read()
-            if self.process.poll() == 0:
-                print("End command")
-                raise EndpointClose()
-            if not data or len(data) == 0:
-                pass
-                #self.is_cmd_running.clear()
-            else:
-                return data
+        data = self.process.stdout.read(4096)
+        if self.process.poll() == 0:
+            print("End command")
+            raise EndpointClose()
+        if not data or len(data) == 0:
+            pass
+        else:
+            return data
