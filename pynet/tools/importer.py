@@ -1,5 +1,6 @@
 import sys
 import logging
+import importlib.util
 
 # taken from rebus
 log = logging.getLogger("pynet.importer")
@@ -11,17 +12,24 @@ def importer_for(path, prefix):
         import pkgutil
         folder = os.path.dirname(path)
         module = sys.modules[prefix]
-        for importer, name, _ in pkgutil.iter_modules([folder]):
+        for _, name, _ in pkgutil.iter_modules([folder]):
             absname = prefix+"."+name
             if absname in sys.modules:
                 continue
-            loader = importer.find_module(absname)
-            try:
-                submod = loader.load_module(absname)
-            except (ImportError,NotImplementedError) as e:
-                if stop_on_error:
-                    raise
-                log.warning("Cannot load pynet plugin [%s]. Root cause: %s", name, e)
+            submodule_spec = importlib.util.spec_from_file_location(absname, os.path.join(folder,name)+".py")
+            if submodule_spec and submodule_spec.loader:
+                try:
+                    submodule = importlib.util.module_from_spec(submodule_spec)
+                    #sys.modules[absname] = module
+                    submodule_spec.loader.exec_module(submodule)
+                except (ImportError,NotImplementedError) as e:
+                    if stop_on_error:
+                        raise
+                    log.warning(f"Cannot load pynet plugin [{name}]. Root cause: {e}")
+                else:
+                    setattr(module, name, submodule)
             else:
-                setattr(module, name, submod)
+                if stop_on_error:
+                    raise ImportError(f"Cannot load pynet plugin [{name}]")
+
     return import_all
